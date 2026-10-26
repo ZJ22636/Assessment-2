@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+
+# Cython build artefacts
+build/
+*.c
+*.so
+*.pyd
+*.html
+
+# Simulation output and profiling
+LL-Output-*.txt
+prof.txt
+
+# Editor / OS
+.vscode/
+.DS_Store
