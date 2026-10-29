@@ -2,12 +2,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 #path to the folder containing the data files
-folder = "Results/MCS_1000_T0.65_Size_50/"
+folder = "Results/MCS_5000_T0.65_Size_50/"
 #name of data files to be plotted
-files= ["MCS1000_T0.65_Size50_V1.txt", 
+"""files= ["MCS1000_T0.65_Size50_V1.txt", 
         "MCS1000_T0.65_Size50_V2.txt", 
         "MCS1000_T0.65_Size50_V3.txt",
-        "MCS1000_T0.65_Size50_V4.txt",]
+        "MCS1000_T0.65_Size50_V4.txt",]"""
+files = ["MCS5000_T0.65_Size50_V1.txt"]
 temp = 0.65
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4))
