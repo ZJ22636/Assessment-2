@@ -23,6 +23,7 @@ SH 16-Oct-23
 """
 
 import sys
+import os
 import time
 import datetime
 import numpy as np
@@ -111,7 +112,15 @@ def savedat(arr,nsteps,Ts,runtime,ratio,energy,order,nmax):
     """
     # Create filename based on current date and time.
     current_datetime = datetime.datetime.now().strftime("%a-%d-%b-%Y-at-%I-%M-%S%p")
-    filename = "LL-Output-{:s}.txt".format(current_datetime)
+    
+    #changed output filename as date and time was annoying
+    folder = "Outputs"
+    os.makedir(folder, exist_ok=True)
+    base = "MCS{:d}_T{:.2f}_Size{:d}".format(nsteps, Ts, nmax)
+    v = 1
+    while os.path.exists(os.path.join(folder, "{}_V{:d}.txt".format(base, v))):
+        v += 1
+    filename = os.path.join(folder, "{}_V{:d}.txt".format(base, v))
     FileOut = open(filename,"w")
     # Write a header with run parameters
     print("#=====================================================",file=FileOut)

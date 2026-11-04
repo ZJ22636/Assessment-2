@@ -10,6 +10,7 @@ build/
 *.html
 
 # Simulation output and profiling
+Outputs/
 LL-Output-*.txt
 prof.txt
 
