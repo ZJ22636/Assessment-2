@@ -16,3 +16,8 @@ prof.txt
 # Editor / OS
 .vscode/
 .DS_Store
+
+#pytest and coverage
+.pytest_cache/
+.coverage
+htmlcov/
