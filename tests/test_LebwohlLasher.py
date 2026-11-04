@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import LebwohlLasher as LL
 
-N = 20
+N = 10
 
 #setting up lattice
 def test_initdat_shape_and_range():
@@ -21,7 +21,7 @@ def test_aligned_total_energy():
     
 def test_perp_energy():
     i, j = np.indices((N,N))
-    lattice = np.where((i, j) % 2 == 0, 0.0, np.pi /2) #checkerboard of 0 and 90 degrees
+    lattice = np.where((i + j) % 2 == 0, 0.0, np.pi /2) #checkerboard of 0 and 90 degrees
     assert LL.one_energy(lattice, 3, 4, N) == pytest.approx(2.0)
     
 def test_periodic_boundaries():
