@@ -268,7 +268,9 @@ def main(program, nsteps, nmax, temp, pflag):
       NULL
     """
     # Create and initialise lattice
+    t_start = time.perf_counter()
     lattice = initdat(nmax)
+    t_setup = time.perf_counter() - t_start
     # Plot initial frame of lattice
     plotdat(lattice,pflag,nmax)
     # Create arrays to store energy, acceptance ratio and order parameter
@@ -277,23 +279,39 @@ def main(program, nsteps, nmax, temp, pflag):
     ratio = np.zeros(nsteps+1,dtype=np.float64)
     order = np.zeros(nsteps+1,dtype=np.float64)
     # Set initial values in arrays
+    t_start = time.perf_counter()
     energy[0] = all_energy(lattice,nmax)
     ratio[0] = 0.5 # ideal value
     order[0] = get_order(lattice,nmax)
+    t_setup += time.perf_counter() - t_start
 
     # Begin doing and timing some MC steps.
+    t_mc = t_energy = t_order = 0.0
     initial = time.time()
     for it in range(1,nsteps+1):
+        t0 = time.perf_counter()
         ratio[it] = MC_step(lattice,temp,nmax)
+        
+        t1 = time.perf_counter()
         energy[it] = all_energy(lattice,nmax)
+        
+        t2 = time.perf_counter()
         order[it] = get_order(lattice,nmax)
+        
+        t3 = time.perf_counter()
+        t_mc += t1 -t0
+        t_energy += t2 - t1
+        t_order += t3 - t2
     final = time.time()
     runtime = final-initial
     
     # Final outputs
     print("{}: Size: {:d}, Steps: {:d}, T*: {:5.3f}: Order: {:5.3f}, Time: {:8.6f} s".format(program, nmax,nsteps,temp,order[nsteps],runtime))
     # Plot final frame of lattice and generate output file
+    t_start = time.perf_counter()
     savedat(lattice,nsteps,temp,runtime,ratio,energy,order,nmax)
+    t_save = time.perf_counter() - t_start
+    print("Timings: setup: {:8.6f} s, MC_step: {:8.6f} s, all_energy: {:8.6f} s, get_order: {:8.6f} s, savedat: {:8.6f} s".format(t_setup, t_mc, t_energy, t_order, t_save))
     plotdat(lattice,pflag,nmax)
 #=======================================================================
 # Main part of program, getting command line arguments and calling
