@@ -184,6 +184,7 @@ def all_energy(arr,nmax):
             enall += one_energy(arr,i,j,nmax)
     return enall
 #=======================================================================
+@jit(nopython=True, cache=True)
 def get_order(arr,nmax):
     """
     Arguments:
@@ -209,7 +210,7 @@ def get_order(arr,nmax):
                 for j in range(nmax):
                     Qab[a,b] += 3*lab[a,i,j]*lab[b,i,j] - delta[a,b]
     Qab = Qab/(2*nmax*nmax)
-    eigenvalues,eigenvectors = np.linalg.eig(Qab)
+    eigenvalues = np.linalg.eigh(Qab)[0]
     return eigenvalues.max()
 #=======================================================================
 def MC_step(arr,Ts,nmax):
