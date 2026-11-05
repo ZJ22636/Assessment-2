@@ -115,7 +115,7 @@ def savedat(arr,nsteps,Ts,runtime,ratio,energy,order,nmax):
     
     #changed output filename as date and time was annoying
     folder = "Outputs"
-    os.makedir(folder, exist_ok=True)
+    os.makedirs(folder, exist_ok=True)
     base = "MCS{:d}_T{:.2f}_Size{:d}".format(nsteps, Ts, nmax)
     v = 1
     while os.path.exists(os.path.join(folder, "{}_V{:d}.txt".format(base, v))):
