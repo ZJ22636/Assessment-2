@@ -213,6 +213,7 @@ def get_order(arr,nmax):
     eigenvalues = np.linalg.eigh(Qab)[0]
     return eigenvalues.max()
 #=======================================================================
+@jit(nopython=True, cache = True)
 def MC_step(arr,Ts,nmax):
     """
     Arguments:
@@ -236,9 +237,9 @@ def MC_step(arr,Ts,nmax):
     # with temperature.
     scale=0.1+Ts
     accept = 0
-    xran = np.random.randint(0,high=nmax, size=(nmax,nmax))
-    yran = np.random.randint(0,high=nmax, size=(nmax,nmax))
-    aran = np.random.normal(scale=scale, size=(nmax,nmax))
+    xran = np.random.randint(0,nmax,(nmax,nmax)) #positional arg
+    yran = np.random.randint(0,nmax,(nmax,nmax))
+    aran = np.random.normal(0.0,scale, (nmax,nmax))
     for i in range(nmax):
         for j in range(nmax):
             ix = xran[i,j]
