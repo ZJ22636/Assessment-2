@@ -3,9 +3,10 @@ import pytest
 import numba
 import LebwohlLasher as LL
 import Numba_LebwohlLasher as NB
+import NumbaParallel_LebwohlLasher as NBP
 
 N = 20
-MODULES = [NB]
+MODULES = [NB, NBP]
 
 def seed_all(module,seed):
     np.random.seed(seed)
@@ -70,6 +71,25 @@ def test_high_temperature_stays_disordered(module):
         module.MC_step(lattice, 2.0, N)
     assert module.get_order(lattice, N) < 0.5
     
+#Parallel only
+def test_parallel_odd_size_rejected():
+    with pytest.raises(ValueError):
+        NBP.MC_step(NBP.initdat(5), 0.5, 5) 
+        
+def test_parallel_same_result_any_thread_count():
+    threads = numba.config.NUMBA_NUM_THREADS          # all available threads
+    results = []
+    for t in (1, threads):
+        numba.set_num_threads(t)
+        seed_all(NBP, 7)
+        lattice = NBP.initdat(N)
+        for _ in range(10):
+            NBP.MC_step(lattice, 0.5, N)
+        results.append(lattice)
+    numba.set_num_threads(threads)
+    assert np.allclose(results[0], results[1])
+    
+    
 #Physics Check
 def equilibrium_averages(module, temp, seed):
     """Run 300 MC steps and average energy per cell and acceptance over the last 150."""
@@ -103,3 +123,11 @@ def test_serial_main_runs_and_saves(tmp_path, monkeypatch, capsys):
     assert len(files) == 1
     assert np.loadtxt(files[0]).shape == (6, 4)
     assert "compile" in capsys.readouterr().out
+    
+def test_parallel_main_runs_and_saves(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    NBP.main("test", 5, N, 0.5, 0, 1)
+    files = list((tmp_path / "Outputs" / "NumbaParallel").glob("*.txt"))
+    assert len(files) == 1
+    assert np.loadtxt(files[0]).shape == (6, 4)
+    assert "Threads: 1" in capsys.readouterr().out
