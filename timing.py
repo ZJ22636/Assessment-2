@@ -3,11 +3,15 @@ import sys
 import pandas as pd
 import time
 import os
+import platform
 
-#Settings Change for each Run
-program = "LebwohlLasher.py"
-output_file = "Results/Timings/Original.csv"
-sizes = [25, 50, 100, 200]
+#File names
+program = sys.argv[1]
+label = sys.argv[2]
+output_file = "Results/Timings/{}.csv".format(label)
+
+#Settings keep same so all same
+sizes = [20, 50, 100, 200]
 steps = 50
 temp = 0.5
 repeats = 3
@@ -32,7 +36,9 @@ for size in sizes:
         def grab(label):
             return float(out.split(label + ":")[1].split("s")[0])
         
-        rows.append({"size": size, "repeat": r,
+        rows.append({"version": label,
+                     "size": size, "repeat": r,
+                     "steps": steps, "temp": temp,
                      "wall_s": wall,
                      "setup_s": grab("setup"),
                      "loop_s": grab("Time"),
@@ -47,7 +53,15 @@ df["other_s"] = df["wall_s"] - df["setup_s"] - df["loop_s"] - df["savedat_s"]
 df.to_csv(output_file, index=False)
 print("Saved", output_file)
 
+import numpy
+with open("Results/Timings/machine_info.txt", "w") as f:
+    f.write("CPU: {}\n".format(platform.processor()))
+    f.write("Cores: {}\n".format(os.cpu_count()))
+    f.write("OS: {}\n".format(platform.platform()))
+    f.write("Python: {}\n".format(platform.python_version()))
+    f.write("NumPy: {}\n".format(numpy.__version__))
+
 #summary
-print(df.groupby("size").mean().round(4))
+print(df.groupby("size")[["loop_s", "mc_step_s", "all_energy_s", "get_order_s", "wall_s"]].mean().round(4))
          
         

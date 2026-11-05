@@ -100,7 +100,7 @@ def test_high_temperature_stays_disordered():
 def test_main_runs_and_saves(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path) # write the output file into a temporary folder
     LL.main("test", 5, N, 0.5, 0)
-    files = list((tmp_path / "Outputs").glob("*.txt"))
+    files = list((tmp_path / "Outputs").rglob("*.txt"))
     assert len(files) == 1
     data = np.loadtxt(files[0])
     assert data.shape == (6, 4) # steps 0 to 5, four columns

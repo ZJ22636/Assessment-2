@@ -30,6 +30,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
+VERSION = "Original" #label for output folders and headers
+
 #=======================================================================
 def initdat(nmax):
     """
@@ -114,7 +116,7 @@ def savedat(arr,nsteps,Ts,runtime,ratio,energy,order,nmax):
     current_datetime = datetime.datetime.now().strftime("%a-%d-%b-%Y-at-%I-%M-%S%p")
     
     #changed output filename as date and time was annoying
-    folder = "Outputs"
+    folder = os.path.join("Outputs", VERSION)
     os.makedirs(folder, exist_ok=True)
     base = "MCS{:d}_T{:.2f}_Size{:d}".format(nsteps, Ts, nmax)
     v = 1
@@ -125,6 +127,7 @@ def savedat(arr,nsteps,Ts,runtime,ratio,energy,order,nmax):
     # Write a header with run parameters
     print("#=====================================================",file=FileOut)
     print("# File created:        {:s}".format(current_datetime),file=FileOut)
+    print("# Version:             {:s}".format(VERSION),file=FileOut) #which code made the file
     print("# Size of lattice:     {:d}x{:d}".format(nmax,nmax),file=FileOut)
     print("# Number of MC steps:  {:d}".format(nsteps),file=FileOut)
     print("# Reduced temperature: {:5.3f}".format(Ts),file=FileOut)
