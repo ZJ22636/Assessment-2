@@ -204,51 +204,24 @@ def get_order(arr,nmax):
     return eigenvalues.max()
 #=======================================================================
 def MC_step(arr,Ts,nmax):
-    """
-    Arguments:
-	  arr (float(nmax,nmax)) = array that contains lattice data;
-	  Ts (float) = reduced temperature (range 0 to 2);
-      nmax (int) = side length of square lattice.
-    Description:
-      Function to perform one MC step, which consists of an average
-      of 1 attempted change per lattice site.  Working with reduced
-      temperature Ts = kT/epsilon.  Function returns the acceptance
-      ratio for information.  This is the fraction of attempted changes
-      that are successful.  Generally aim to keep this around 0.5 for
-      efficient simulation.
-	Returns:
-	  accept/(nmax**2) (float) = acceptance ratio for current MCS.
-    """
-    #
-    # Pre-compute some random numbers.  This is faster than
-    # using lots of individual calls.  "scale" sets the width
-    # of the distribution for the angle changes - increases
-    # with temperature.
-    scale=0.1+Ts
+    if nmax % 2 != 0:
+        raise ValueError("Checkerboard update needs an even numbered lattice size") #odd sizes break at wraparound
+    scale = 0.1+Ts
     accept = 0
-    xran = np.random.randint(0,high=nmax, size=(nmax,nmax))
-    yran = np.random.randint(0,high=nmax, size=(nmax,nmax))
-    aran = np.random.normal(scale=scale, size=(nmax,nmax))
-    for i in range(nmax):
-        for j in range(nmax):
-            ix = xran[i,j]
-            iy = yran[i,j]
-            ang = aran[i,j]
-            en0 = one_energy(arr,ix,iy,nmax)
-            arr[ix,iy] += ang
-            en1 = one_energy(arr,ix,iy,nmax)
-            if en1<=en0:
-                accept += 1
-            else:
-            # Now apply the Monte Carlo test - compare
-            # exp( -(E_new - E_old) / T* ) >= rand(0,1)
-                boltz = np.exp( -(en1 - en0) / Ts )
-
-                if boltz >= np.random.uniform(0.0,1.0):
-                    accept += 1
-                else:
-                    arr[ix,iy] -= ang
+    i, j = np.indices((nmax,nmax))
+    for colour in (0,1): #update black cells then white
+        mask = (i + j) % 2 == colour #cells of this colour 
+        aran = np.random.normal(scale=scale, size=(nmax, nmax))
+        en0 = cell_energies(arr) #energy before change
+        trial = arr + aran*mask #change only this colour
+        en1 = cell_energies(trial) #energy after change
+        boltz = np.exp( -(en1 - en0) / Ts) #Boltzmann factor for every cell
+        rand = np.random.uniform(0.0, 1.0, size=(nmax,nmax))
+        accepted = mask & ((en1 <= en0) | (boltz >= rand)) #metropolis test
+        arr[accepted] = trial[accepted] #keep accepted change
+        accept += accepted.sum()
     return accept/(nmax*nmax)
+
 #=======================================================================
 def main(program, nsteps, nmax, temp, pflag):
     """
