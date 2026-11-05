@@ -20,7 +20,7 @@ from numba import jit #numba just in time compiler
 
 VERSION = "Numba" #label for output folders and headers
 
-@jit
+@jit(nopython=True)
 def set_seed(seed):
     np.random.seed(seed) #numba own RNG
 #=======================================================================
@@ -131,6 +131,7 @@ def savedat(arr,nsteps,Ts,runtime,ratio,energy,order,nmax):
         print("   {:05d}    {:6.4f} {:12.4f}  {:6.4f} ".format(i,ratio[i],energy[i],order[i]),file=FileOut)
     FileOut.close()
 #=======================================================================
+@jit(nopython=True, cache=True) # decorator, compiled
 def one_energy(arr,ix,iy,nmax):
     """
     Arguments:
@@ -165,6 +166,7 @@ def one_energy(arr,ix,iy,nmax):
     en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
     return en
 #=======================================================================
+@jit(nopython=True, cache=True) #decorator, compiled 
 def all_energy(arr,nmax):
     """
     Arguments:

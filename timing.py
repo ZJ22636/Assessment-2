@@ -38,7 +38,7 @@ for size in sizes:
         def grab(name):
             if name + ":" not in out:
                 return 0.0
-            return float(out.split(label + ":")[1].split("s")[0])
+            return float(out.split(name + ":")[1].split("s")[0])
         
         rows.append({"version": label,
                      "size": size, "repeat": r,
@@ -68,7 +68,7 @@ with open("Results/Timings/machine_info.txt", "w") as f:
     f.write("NumPy: {}\n".format(numpy.__version__))
     try: 
         import numba
-        f.write("Numba: {}\n".format(numpy._version_))
+        f.write("Numba: {}\n".format(numba.__version__))
     except ImportError:
         pass
 
