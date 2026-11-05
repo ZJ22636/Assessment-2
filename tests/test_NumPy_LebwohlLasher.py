@@ -18,3 +18,13 @@ def test_all_energy_matches_original():
     np.random.seed(4)
     lattice = LL.initdat(N)
     assert NP.all_energy(lattice, N) == pytest.approx(LL.all_energy(lattice, N))
+    
+def test_get_order_matches_original():
+    np.random.seed(5)
+    lattice = LL.initdat(N)
+    assert NP.get_order(lattice, N) == pytest.approx(LL.get_order(lattice, N).real)
+
+
+def test_get_order_is_real():
+    np.random.seed(6)
+    assert np.isrealobj(NP.get_order(LL.initdat(N), N))   # eigh never gives complex numbers
