@@ -162,22 +162,22 @@ def one_energy(arr,ix,iy,nmax):
     en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
     return en
 #=======================================================================
+def cell_energies(arr):
+    """numpy version of one_energy for every cell at once
+    np.roll moves whole lattice one cell and wraps round edges
+    so each new copy holds one neighbour of every cell"""
+    
+    en = np.zeros_like(arr)
+    for shift, axis in ((1,0), (-1, 0), (1,1), (-1,1)):
+        ang = arr - np.roll(arr, shift, axis = axis)
+        en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
+    return en
+
+
 def all_energy(arr,nmax):
-    """
-    Arguments:
-	  arr (float(nmax,nmax)) = array that contains lattice data;
-      nmax (int) = side length of square lattice.
-    Description:
-      Function to compute the energy of the entire lattice. Output
-      is in reduced units (U/epsilon).
-	Returns:
-	  enall (float) = reduced energy of lattice.
-    """
-    enall = 0.0
-    for i in range(nmax):
-        for j in range(nmax):
-            enall += one_energy(arr,i,j,nmax)
-    return enall
+    #vectorised so all cells at once
+    return cell_energies(arr).sum()
+
 #=======================================================================
 def get_order(arr,nmax):
     """
