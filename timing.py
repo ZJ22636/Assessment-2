@@ -63,6 +63,11 @@ import numpy
 with open("Results/Timings/machine_info.txt", "w") as f:
     f.write("CPU: {}\n".format(platform.processor()))
     f.write("Cores: {}\n".format(os.cpu_count()))
+    try:
+        import psutil
+        f.write("Physcial cores: {}\n".format(psutil.cpu_count(logical=False)))
+    except ImportError:
+        pass
     f.write("OS: {}\n".format(platform.platform()))
     f.write("Python: {}\n".format(platform.python_version()))
     f.write("NumPy: {}\n".format(numpy.__version__))
