@@ -1,27 +1,3 @@
-"""
-Basic Python Lebwohl-Lasher code.  Based on the paper 
-P.A. Lebwohl and G. Lasher, Phys. Rev. A, 6, 426-429 (1972).
-This version in 2D.
-
-Run at the command line by typing:
-
-python LebwohlLasher.py <ITERATIONS> <SIZE> <TEMPERATURE> <PLOTFLAG>
-
-where:
-  ITERATIONS = number of Monte Carlo steps, where 1MCS is when each cell
-      has attempted a change once on average (i.e. SIZE*SIZE attempts)
-  SIZE = side length of square lattice
-  TEMPERATURE = reduced temperature in range 0.0 - 2.0.
-  PLOTFLAG = 0 for no plot, 1 for energy plot and 2 for angle plot.
-  
-The initial configuration is set at random. The boundaries
-are periodic throughout the simulation.  During the
-time-stepping, an array containing two domains is used; these
-domains alternate between old data and new data.
-
-SH 16-Oct-23
-"""
-
 import sys
 import os
 import time
@@ -115,7 +91,7 @@ def savedat(arr,nsteps,Ts,runtime,ratio,energy,order,nmax):
     
     #changed output filename as date and time was annoying
     folder = "Outputs"
-    os.makedir(folder, exist_ok=True)
+    os.makedirs(folder, exist_ok=True)
     base = "MCS{:d}_T{:.2f}_Size{:d}".format(nsteps, Ts, nmax)
     v = 1
     while os.path.exists(os.path.join(folder, "{}_V{:d}.txt".format(base, v))):
