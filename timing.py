@@ -12,7 +12,7 @@ threads = int(sys.argv[3]) if len(sys.argv) > 3 else None #for parallel version
 output_file = "Results/Timings/{}.csv".format(label)
 
 #Settings keep same so all same
-sizes = [20, 50, 100, 200]
+sizes = [400, 800, 1600, 3200]
 steps = 50
 temp = 0.5
 repeats = 3
