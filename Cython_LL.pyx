@@ -1,13 +1,15 @@
 """
 Cython version of Lebwohl-Lasher, C type version
-variables now C types with cdef and lattice passed as 
-typed memoryview
+variables now C types with cdef, lattice passed as 
+typed memoryview and C maths functions instead of NumPy 
 """
 import numpy as np
 cimport cython
+from libc.math cimport cos, sin, exp
 #=======================================================================
 @cython.boundscheck(False) #skip checking indices inside array
 @cython.wraparound(False) #no negative indices
+@cython.cdivision(True) #C style division
 cpdef double one_energy(double[:, ::1] arr, int ix, int iy, int nmax):
     """
     Arguments:
@@ -26,21 +28,21 @@ cpdef double one_energy(double[:, ::1] arr, int ix, int iy, int nmax):
     cdef double en = 0.0
     cdef double ang
     cdef int ixp = (ix+1)%nmax # These are the coordinates
-    cdef int ixm = (ix-1)%nmax # of the neighbours
+    cdef int ixm = (ix-1+nmax)%nmax # of the neighbours
     cdef int iyp = (iy+1)%nmax # with wraparound
-    cdef int iym = (iy-1)%nmax #
+    cdef int iym = (iy-1+nmax)%nmax 
 #
 # Add together the 4 neighbour contributions
 # to the energy
 #
     ang = arr[ix,iy]-arr[ixp,iy]
-    en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
+    en += 0.5*(1.0 - 3.0*cos(ang)*cos(ang))
     ang = arr[ix,iy]-arr[ixm,iy]
-    en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
+    en += 0.5*(1.0 - 3.0*cos(ang)*cos(ang))
     ang = arr[ix,iy]-arr[ix,iyp]
-    en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
+    en += 0.5*(1.0 - 3.0*cos(ang)*cos(ang))
     ang = arr[ix,iy]-arr[ix,iym]
-    en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
+    en += 0.5*(1.0 - 3.0*cos(ang)*cos(ang))
     return en
 
 #=======================================================================
@@ -78,19 +80,17 @@ def get_order(double[:, ::1] arr, int nmax):
 	  max(eigenvalues(Qab)) (float) = order parameter for lattice.
     """
     cdef double[:, ::1] Qab = np.zeros((3,3))
-    cdef double[:, ::1] delta = np.eye(3,3)
+    cdef double cell[3] #unit vector of one cell
     cdef int a, b, i, j
-    #
-    # Generate a 3D unit vector for each cell (i,j) and
-    # put it in a (3,i,j) array.
-    #
-    arr_np = np.asarray(arr) #numpy array
-    cdef double[:, :, ::1] lab = np.vstack((np.cos(arr_np),np.sin(arr_np),np.zeros_like(arr_np))).reshape(3,nmax,nmax)
-    for a in range(3):
-        for b in range(3):
-            for i in range(nmax):
-                for j in range(nmax):
-                    Qab[a,b] += 3*lab[a,i,j]*lab[b,i,j] - delta[a,b]
+    for i in range(nmax):
+        for j in range(nmax):
+            cell[0] = cos(arr[i, j]) #3D unit vector of cell
+            cell[1] = sin(arr[i, j])
+            cell[2] = 0.0
+            for a in range(3):
+                for b in range(3):
+                    Qab[a,b] += 3*cell[a]*cell[b] - (a == b)
+
     Q = np.asarray(Qab)/(2*nmax*nmax)
     eigenvalues,eigenvectors = np.linalg.eigh(Q)
     return eigenvalues.max()
@@ -126,6 +126,7 @@ def MC_step(double[:, ::1] arr, double Ts, int nmax):
     cdef Py_ssize_t[:, ::1] xran = np.random.randint(0,high=nmax, size=(nmax,nmax)).astype(np.intp)
     cdef Py_ssize_t[:, ::1] yran = np.random.randint(0,high=nmax, size=(nmax,nmax)).astype(np.intp)
     cdef double[:, ::1] aran = np.random.normal(scale=scale, size=(nmax,nmax))
+    cdef double[:, ::1] rran = np.random.uniform(0.0, 1.0, size=(nmax,nmax))
 
     for i in range(nmax):
         for j in range(nmax):
@@ -140,9 +141,9 @@ def MC_step(double[:, ::1] arr, double Ts, int nmax):
             else:
             # Now apply the Monte Carlo test - compare
             # exp( -(E_new - E_old) / T* ) >= rand(0,1)
-                boltz = np.exp( -(en1 - en0) / Ts )
+                boltz = exp( -(en1 - en0) / Ts)
 
-                if boltz >= np.random.uniform(0.0,1.0):
+                if boltz >= rran[i, j]: #no python call as premade random num
                     accept += 1
                 else:
                     arr[ix,iy] -= ang
