@@ -131,3 +131,10 @@ def test_parallel_main_runs_and_saves(tmp_path, monkeypatch, capsys):
     assert len(files) == 1
     assert np.loadtxt(files[0]).shape == (6, 4)
     assert "Threads: 1" in capsys.readouterr().out
+    
+def test_parallel_command_line(tmp_path):
+    import subprocess, sys, pathlib
+    program = pathlib.Path(NBP.__file__)
+    result = subprocess.run([sys.executable, str(program), "5", "20", "0.5", "0", "2"],
+                            capture_output=True, text=True, cwd=tmp_path)
+    assert "Threads: 2" in result.stdout

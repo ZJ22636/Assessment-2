@@ -313,7 +313,7 @@ def main(program, nsteps, nmax, temp, pflag, threads):
 
     # Begin doing and timing some MC steps.
     t_mc = t_energy = t_order = 0.0
-    initial = time.time()
+    initial = time.perf_counter()
     for it in range(1,nsteps+1):
         t0 = time.perf_counter()
         ratio[it] = MC_step(lattice,temp,nmax)
@@ -328,7 +328,7 @@ def main(program, nsteps, nmax, temp, pflag, threads):
         t_mc += t1 -t0
         t_energy += t2 - t1
         t_order += t3 - t2
-    final = time.time()
+    final = time.perf_counter()
     runtime = final-initial
     
     # Final outputs

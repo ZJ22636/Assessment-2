@@ -35,6 +35,11 @@ for size in sizes:
             sys.exit("Run failed, see error above")
             
         out = result.stdout
+        
+        if "Time:" not in out: #time saftety check
+            print(out)
+            sys.exit("Program ran but no printed timings, check command line args")
+        
         def grab(name):
             if name + ":" not in out:
                 return 0.0
