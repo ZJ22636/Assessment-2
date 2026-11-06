@@ -11,7 +11,7 @@ from cython.parallel cimport prange
 
 #=======================================================================
 def set_threads(int threads):
-openmp.omp_set_num_threads(threads)
+    openmp.omp_set_num_threads(threads)
 
 @cython.boundscheck(False) #skip checking indices inside array
 @cython.wraparound(False) #no negative indices
@@ -87,7 +87,6 @@ def get_order(double[:, ::1] arr, int nmax):
 	Returns:
 	  max(eigenvalues(Qab)) (float) = order parameter for lattice.
     """
-    cdef double[:, ::1] Qab = np.zeros((3,3))
     cdef double sxx = 0.0, syy = 0.0, sxy = 0.0
     cdef double c, s
     cdef int i,j
@@ -99,7 +98,7 @@ def get_order(double[:, ::1] arr, int nmax):
             sxx += c*c
             syy += s*s
             sxy += c*s
-    def double n2 = nmax*nmax
+    cdef double n2 = nmax*nmax
     Qab = np.array([[3*sxx - n2, 3*sxy, 0.0],
                     [3*sxy, 3*syy - n2, 0.0],
                     [0.0, 0.0, -n2]])
