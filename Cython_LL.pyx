@@ -1,10 +1,14 @@
 """
-Cython version of Lebwohl-Lasher, original version 
-compiled unchanged
+Cython version of Lebwohl-Lasher, C type version
+variables now C types with cdef and lattice passed as 
+typed memoryview
 """
 import numpy as np
+cimport cython
 #=======================================================================
-def one_energy(arr,ix,iy,nmax):
+@cython.boundscheck(False) #skip checking indices inside array
+@cython.wraparound(False) #no negative indices
+cpdef double one_energy(double[:, ::1] arr, int ix, int iy, int nmax):
     """
     Arguments:
 	  arr (float(nmax,nmax)) = array that contains lattice data;
@@ -19,16 +23,17 @@ def one_energy(arr,ix,iy,nmax):
 	Returns:
 	  en (float) = reduced energy of cell.
     """
-    en = 0.0
-    ixp = (ix+1)%nmax # These are the coordinates
-    ixm = (ix-1)%nmax # of the neighbours
-    iyp = (iy+1)%nmax # with wraparound
-    iym = (iy-1)%nmax #
+    cdef double en = 0.0
+    cdef double ang
+    cdef int ixp = (ix+1)%nmax # These are the coordinates
+    cdef int ixm = (ix-1)%nmax # of the neighbours
+    cdef int iyp = (iy+1)%nmax # with wraparound
+    cdef int iym = (iy-1)%nmax #
 #
 # Add together the 4 neighbour contributions
 # to the energy
 #
-    ang = arr[ix,iy]-arr'[ixp,iy]
+    ang = arr[ix,iy]-arr[ixp,iy]
     en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
     ang = arr[ix,iy]-arr[ixm,iy]
     en += 0.5*(1.0 - 3.0*np.cos(ang)**2)
@@ -39,7 +44,7 @@ def one_energy(arr,ix,iy,nmax):
     return en
 
 #=======================================================================
-def all_energy(arr,nmax):
+cpdef double all_energy(double[:, ::1] arr, int nmax):
     """
     Arguments:
 	  arr (float(nmax,nmax)) = array that contains lattice data;
@@ -50,14 +55,17 @@ def all_energy(arr,nmax):
 	Returns:
 	  enall (float) = reduced energy of lattice.
     """
-    enall = 0.0
+    cdef double enall = 0.0
+    cdef int i, j
     for i in range(nmax):
         for j in range(nmax):
             enall += one_energy(arr,i,j,nmax)
     return enall
 
 #=======================================================================
-def get_order(arr,nmax):
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def get_order(double[:, ::1] arr, int nmax):
     """
     Arguments:
 	  arr (float(nmax,nmax)) = array that contains lattice data;
@@ -69,25 +77,28 @@ def get_order(arr,nmax):
 	Returns:
 	  max(eigenvalues(Qab)) (float) = order parameter for lattice.
     """
-    Qab = np.zeros((3,3))
-    delta = np.eye(3,3)
+    cdef double[:, ::1] Qab = np.zeros((3,3))
+    cdef double[:, ::1] delta = np.eye(3,3)
+    cdef int a, b, i, j
     #
     # Generate a 3D unit vector for each cell (i,j) and
     # put it in a (3,i,j) array.
     #
-    lab = np.vstack((np.cos(arr),np.sin(arr),np.zeros_like(arr))).reshape(3,nmax,nmax)
+    arr_np = np.asarray(arr) #numpy array
+    cdef double[:, :, ::1] lab = np.vstack((np.cos(arr_np),np.sin(arr_np),np.zeros_like(arr_np))).reshape(3,nmax,nmax)
     for a in range(3):
         for b in range(3):
             for i in range(nmax):
                 for j in range(nmax):
                     Qab[a,b] += 3*lab[a,i,j]*lab[b,i,j] - delta[a,b]
-    Qab = Qab/(2*nmax*nmax)
-    eigenvalues,eigenvectors = np.linalg.eig(Qab)
+    Q = np.asarray(Qab)/(2*nmax*nmax)
+    eigenvalues,eigenvectors = np.linalg.eigh(Q)
     return eigenvalues.max()
 #=======================================================================
 
-
-def MC_step(arr,Ts,nmax):
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def MC_step(double[:, ::1] arr, double Ts, int nmax):
     """
     Arguments:
 	  arr (float(nmax,nmax)) = array that contains lattice data;
@@ -108,11 +119,14 @@ def MC_step(arr,Ts,nmax):
     # using lots of individual calls.  "scale" sets the width
     # of the distribution for the angle changes - increases
     # with temperature.
-    scale=0.1+Ts
-    accept = 0
-    xran = np.random.randint(0,high=nmax, size=(nmax,nmax))
-    yran = np.random.randint(0,high=nmax, size=(nmax,nmax))
-    aran = np.random.normal(scale=scale, size=(nmax,nmax))
+    cdef double scale=0.1+Ts
+    cdef int accept = 0
+    cdef int i, j, ix, iy
+    cdef double ang, en0, en1, boltz
+    cdef Py_ssize_t[:, ::1] xran = np.random.randint(0,high=nmax, size=(nmax,nmax)).astype(np.intp)
+    cdef Py_ssize_t[:, ::1] yran = np.random.randint(0,high=nmax, size=(nmax,nmax)).astype(np.intp)
+    cdef double[:, ::1] aran = np.random.normal(scale=scale, size=(nmax,nmax))
+
     for i in range(nmax):
         for j in range(nmax):
             ix = xran[i,j]
