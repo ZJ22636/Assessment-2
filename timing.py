@@ -8,11 +8,16 @@ import platform
 #File names
 program = sys.argv[1]
 label = sys.argv[2]
-threads = int(sys.argv[3]) if len(sys.argv) > 3 else None #for parallel version
+extra = sys.argv[3] if len(sys.argv) > 3 else None
+threads = processes = None
+if extra is not None and extra.startswith("p"):
+    processes = int(extra[1:])
+elif extra is not None:
+    threads = int(extra)
 output_file = "Results/Timings/{}.csv".format(label)
 
 #Settings keep same so all same
-sizes = [400, 800, 1600, 3200]
+sizes = [20, 50, 100, 200]
 steps = 50
 temp = 0.5
 repeats = 3
@@ -25,6 +30,8 @@ for size in sizes:
         command = [sys.executable, program, str(steps), str(size), str(temp), "0"]
         if threads is not None:
             command.append(str(threads))
+        if processes is not None:
+            command = ["mpiexec", "-n", str(processes)] + command
         start = time.perf_counter()
         result = subprocess.run(command,capture_output=True, text=True)
                                 
@@ -48,6 +55,7 @@ for size in sizes:
         rows.append({"version": label,
                      "size": size, "repeat": r,
                      "threads": threads if threads is not None else 1,
+                     "processes": processes if processes is not None else 1,
                      "steps": steps, "temp": temp,
                      "wall_s": wall,
                      "compile_s": grab("compile"),
@@ -79,6 +87,11 @@ with open("Results/Timings/machine_info.txt", "w") as f:
     try: 
         import numba
         f.write("Numba: {}\n".format(numba.__version__))
+    except ImportError:
+        pass
+    try: 
+        import mpi4py
+        f.write("mpi4py: {}\n".format(mpi4py.__version__))
     except ImportError:
         pass
 

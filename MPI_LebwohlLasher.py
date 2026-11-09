@@ -260,6 +260,7 @@ def main(program, nsteps, nmax, temp, pflag, seed=None):
     size = comm.Get_size()
     if nmax % 2 !=0 or nmax % size != 0:
         raise ValueError("SIZE must be even and divisible by number of ranks")
+    counts = [nmax//size + (1 if r < nmax % size else 0) for r in range(size)] # rows per process
     rows = nmax//size #rows per rank
     row0 = rank*rows #glob number of ranks first row
     up = (rank-1) % size

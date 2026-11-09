@@ -5,3 +5,4 @@ OS: Windows-10-10.0.26200-SP0
 Python: 3.9.13
 NumPy: 2.0.2
 Numba: 0.60.0
+mpi4py: 4.1.2
