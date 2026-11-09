@@ -60,7 +60,7 @@ def test_start_matches_original_any(processes, tmp_path):
 
 @needs_mpiexec
 def test_odd_size_rejected(tmp_path):
-    result, data = run_mpi(2,1,21,0.5,1.tmp_path)
+    result, data = run_mpi(2,1,21,0.5,1,tmp_path)
     assert result.returncode != 0
     assert data is None
     

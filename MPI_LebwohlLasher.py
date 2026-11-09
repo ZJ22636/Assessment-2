@@ -258,8 +258,8 @@ def main(program, nsteps, nmax, temp, pflag, seed=None):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
-    if nmax % 2 !=0 or nmax % size != 0:
-        raise ValueError("SIZE must be even and divisible by number of ranks")
+    if nmax % 2 !=0 or size > nmax:
+        raise ValueError("SIZE must be even and at least number of ranks")
     counts = [nmax//size + (1 if r < nmax % size else 0) for r in range(size)] # rows per process
     rows = counts[rank] #rows per rank
     row0 = sum(counts[:rank]) #glob number of ranks first row
@@ -282,7 +282,7 @@ def main(program, nsteps, nmax, temp, pflag, seed=None):
         lattice = initdat(nmax)
         plotdat(lattice,pflag,nmax)
     strip = np.zeros((rows+2, nmax))
-    comm.Scatterc([lattice, sizes, starts, MPI.DOUBLE] if rank == 0 else None, strip[1:-1], root=0)
+    comm.Scatterv([lattice, sizes, starts, MPI.DOUBLE] if rank == 0 else None, strip[1:-1], root=0)
     t_setup = time.perf_counter() - t_start
     # Create arrays to store energy, acceptance ratio and order parameter
     #changed np.dtype to np.float64 to avoid outdated numpy error
@@ -323,13 +323,14 @@ def main(program, nsteps, nmax, temp, pflag, seed=None):
     comm.Gatherv(np.ascontiguousarray(strip[1:-1]), [lattice,sizes, starts, MPI.DOUBLE]if rank == 0 else None, root=0)
     
     # Final outputs
-    print("{}: Size: {:d}, Steps: {:d}, T*: {:5.3f}, Processes: {:d}: Order: {:5.3f}, Time: {:8.6f} s".format(program, nmax,nsteps,temp, size, order[nsteps],runtime))
-    # Plot final frame of lattice and generate output file
-    t_start = time.perf_counter()
-    savedat(lattice,nsteps,temp,runtime,ratio,energy,order,nmax)
-    t_save = time.perf_counter() - t_start
-    print("Timings: setup: {:8.6f} s, MC_step: {:8.6f} s, all_energy: {:8.6f} s, get_order: {:8.6f} s, savedat: {:8.6f} s".format(t_setup, t_mc, t_energy, t_order, t_save))
-    plotdat(lattice,pflag,nmax)
+    if rank == 0:
+        print("{}: Size: {:d}, Steps: {:d}, T*: {:5.3f}, Processes: {:d}: Order: {:5.3f}, Time: {:8.6f} s".format(program, nmax,nsteps,temp, size, order[nsteps],runtime))
+        # Plot final frame of lattice and generate output file
+        t_start = time.perf_counter()
+        savedat(lattice,nsteps,temp,runtime,ratio,energy,order,nmax)
+        t_save = time.perf_counter() - t_start
+        print("Timings: setup: {:8.6f} s, MC_step: {:8.6f} s, all_energy: {:8.6f} s, get_order: {:8.6f} s, savedat: {:8.6f} s".format(t_setup, t_mc, t_energy, t_order, t_save))
+        plotdat(lattice,pflag,nmax)
 #=======================================================================
 # Main part of program, getting command line arguments and calling
 # main simulation function.
