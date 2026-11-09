@@ -4,7 +4,9 @@ MPI processes each running compiled Cython kernel on own strip of rows.
 
 Lattice is split into horizontal strips one per rank.
 Halo rows used to swap between neighbours.
-Work of each rank done by compiled loops instead of numpy.
+Work of each rank done by compiled loops instead of numpy,
+using cos(2theta) and sin(2theta) so that energies need no trig and each move 
+needs only two trig calls.
 
 Build:
 python setup_Cython.py build_ext -fi
@@ -176,53 +178,46 @@ def halo_exchange(strip, comm, up, down):
     
 
 #=======================================================================
-def all_energy(strip, comm, up, down):
+def all_energy(cs, comm, up, down):
     """
-    energy of whole lattice, eahc rank adds its own rows 
+    energy of whole lattice, each rank adds its own rows 
     then allreduce adds all together
     """
-    halo_exchange(strip, comm, up, down) #current halos
-    local = np.array([local_energy(strip)])
+    halo_exchange(cs, comm, up, down) #current halos
+    local = np.array([local_energy(cs)])
     total = np.zeros(1)
     comm.Allreduce(local, total, op = MPI.SUM) #add up totals
     return total[0]
     
 #=======================================================================
-def get_order(strip, nmax, comm):
+def get_order(cs, nmax, comm):
     """
     order parameter of lattice using Q tensor
     ranks sum own rows allreduce combines
-    
-    z component is always 0 so only need 3 sums
     """
-    local = np.array(order_sums(strip))
-    sums = np.zeros(3)
+    local = np.array(order_sums(cs))
+    sums = np.zeros(2)
     comm.Allreduce(local, sums, op = MPI.SUM)
-    sxx, syy, sxy = sums
-    n2 = nmax*nmax
-    Qab = np.array([[3* sxx - n2, 3*sxy, 0.0],
-                    [3*sxy, 3*syy - n2, 0.0],
-                    [0.0, 0.0,-n2]]) / (2*n2)
-    eigenvalues = np.linalg.eigvalsh(Qab)
-    return eigenvalues.max()
+    mean_c, mean_s = sums/(nmax*nmax)
+    return 0.25 + 0.75*np.sqrt(mean_c**2 + mean_s**2) #workout eignevalue of Q by hand
 #=======================================================================
-def MC_step(strip, Ts, row0, rng, comm, up,down):
+def MC_step(theta, cs, Ts, row0, rng, comm, up,down):
     """
     One MCS using checkerboard update, update black cells
     then white cells. Before each half step halo rows are
     refreshed so cells on edge of strip see neighbours most up 
-    to date values. each rank updates own rows at once.
+    to date values. each rank updates own rows at once.every cell tried once per step
+    one array of random changes and one of random numbers cover both colours
     """
     
     scale=0.1+Ts
-    rows = strip.shape[0] -2
-    nmax = strip.shape[1]
+    rows, nmax = theta.shape
+    aran = rng.normal(scale=scale, size=(rows,nmax))
+    rran = rng.random(size=(rows,nmax))
     accept = 0
     for colour in (0,1): #black cells the white
-        halo_exchange(strip, comm, up, down) #latest edge row of neighbour
-        aran= rng.normal(scale=scale, size=(rows,nmax))
-        rran = rng.random(size=(rows, nmax))
-        accept += mc_half_step(strip, aran, rran, colour, row0, Ts)
+        halo_exchange(cs, comm, up, down) #latest edge row of neighbour
+        accept += mc_half_step(theta, cs, aran, rran, colour, row0, Ts)
     total = comm.allreduce(int(accept), op = MPI.SUM)
       
     return total/(nmax*nmax)
@@ -267,8 +262,12 @@ def main(program, nsteps, nmax, temp, pflag, seed=None):
         np.random.seed(seed)
         lattice = initdat(nmax)
         plotdat(lattice,pflag,nmax)
-    strip = np.zeros((rows+2, nmax))
-    comm.Scatterv([lattice, sizes, starts, MPI.DOUBLE] if rank == 0 else None, strip[1:-1], root=0)
+    theta = np.zeros((rows, nmax))
+    comm.Scatterv([lattice, sizes, starts, MPI.DOUBLE] if rank == 0 else None,
+                  theta, root=0) # each rank gets its rows
+    cs = np.zeros((rows+2,nmax,2)) #cos(2theta), sin(2theta), plus halo rows
+    cs[1:-1,:,0] = np.cos(2*theta)
+    cs[1:-1,:,1] = np.sin(2*theta)
     t_setup = time.perf_counter() - t_start
     # Create arrays to store energy, acceptance ratio and order parameter
     #changed np.dtype to np.float64 to avoid outdated numpy error
@@ -277,9 +276,9 @@ def main(program, nsteps, nmax, temp, pflag, seed=None):
     order = np.zeros(nsteps+1,dtype=np.float64)
     # Set initial values in arrays
     t_start = time.perf_counter()
-    energy[0] = all_energy(strip,comm,up,down)
+    energy[0] = all_energy(cs,comm,up,down)
     ratio[0] = 0.5 # ideal value
-    order[0] = get_order(strip,nmax,comm)
+    order[0] = get_order(cs,nmax,comm)
     t_setup += time.perf_counter() - t_start
 
     # Begin doing and timing some MC steps.
@@ -288,13 +287,13 @@ def main(program, nsteps, nmax, temp, pflag, seed=None):
     initial = time.perf_counter()
     for it in range(1,nsteps+1):
         t0 = time.perf_counter()
-        ratio[it] = MC_step(strip, temp, row0, rng,comm,up,down)
+        ratio[it] = MC_step(theta, cs, temp, row0, rng,comm,up,down)
         
         t1 = time.perf_counter()
-        energy[it] = all_energy(strip,comm,up,down)
+        energy[it] = all_energy(cs,comm,up,down)
         
         t2 = time.perf_counter()
-        order[it] = get_order(strip,nmax,comm)
+        order[it] = get_order(cs,nmax,comm)
         
         t3 = time.perf_counter()
         t_mc += t1 -t0
@@ -306,7 +305,7 @@ def main(program, nsteps, nmax, temp, pflag, seed=None):
     #get rows back on rank 0
     if rank == 0:
         lattice = np.zeros((nmax, nmax))
-    comm.Gatherv(np.ascontiguousarray(strip[1:-1]), [lattice,sizes, starts, MPI.DOUBLE]if rank == 0 else None, root=0)
+    comm.Gatherv(theta, [lattice,sizes, starts, MPI.DOUBLE]if rank == 0 else None, root=0)
     
     # Final outputs
     if rank == 0:
