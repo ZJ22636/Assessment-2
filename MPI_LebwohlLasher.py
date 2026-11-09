@@ -261,8 +261,10 @@ def main(program, nsteps, nmax, temp, pflag, seed=None):
     if nmax % 2 !=0 or nmax % size != 0:
         raise ValueError("SIZE must be even and divisible by number of ranks")
     counts = [nmax//size + (1 if r < nmax % size else 0) for r in range(size)] # rows per process
-    rows = nmax//size #rows per rank
-    row0 = rank*rows #glob number of ranks first row
+    rows = counts[rank] #rows per rank
+    row0 = sum(counts[:rank]) #glob number of ranks first row
+    sizes = [c*nmax for c in counts]
+    starts = [sum(sizes[:r]) for r in range(size)]
     up = (rank-1) % size
     down = (rank+1) % size
     
@@ -280,7 +282,7 @@ def main(program, nsteps, nmax, temp, pflag, seed=None):
         lattice = initdat(nmax)
         plotdat(lattice,pflag,nmax)
     strip = np.zeros((rows+2, nmax))
-    comm.Scatter(lattice, strip[1:-1], root=0)
+    comm.Scatterc([lattice, sizes, starts, MPI.DOUBLE] if rank == 0 else None, strip[1:-1], root=0)
     t_setup = time.perf_counter() - t_start
     # Create arrays to store energy, acceptance ratio and order parameter
     #changed np.dtype to np.float64 to avoid outdated numpy error
@@ -318,7 +320,7 @@ def main(program, nsteps, nmax, temp, pflag, seed=None):
     #get rows back on rank 0
     if rank == 0:
         lattice = np.zeros((nmax, nmax))
-    comm.Gather(np.ascontiguousarray(strip[1:-1]), lattice, root=0)
+    comm.Gatherv(np.ascontiguousarray(strip[1:-1]), [lattice,sizes, starts, MPI.DOUBLE]if rank == 0 else None, root=0)
     
     # Final outputs
     print("{}: Size: {:d}, Steps: {:d}, T*: {:5.3f}, Processes: {:d}: Order: {:5.3f}, Time: {:8.6f} s".format(program, nmax,nsteps,temp, size, order[nsteps],runtime))

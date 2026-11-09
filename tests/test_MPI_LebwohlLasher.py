@@ -48,7 +48,7 @@ def run_mpi(processes, steps, size, temp, seed, folder):
     return result, data
 
 @needs_mpiexec
-@pytest.mark.parametrize("processes", [1, 2, 4])
+@pytest.mark.parametrize("processes", [1, 2,3, 4])
 def test_start_matches_original_any(processes, tmp_path):
     result, data = run_mpi(processes, 1, N, 0.5, 11, tmp_path)
     assert f"Processes: {processes}" in result.stdout
@@ -59,10 +59,11 @@ def test_start_matches_original_any(processes, tmp_path):
     
 
 @needs_mpiexec
-def test_size_not_divisible_rejected(tmp_path):
-    result, data = run_mpi(3, 1, N, 0.5, 1, tmp_path)
+def test_odd_size_rejected(tmp_path):
+    result, data = run_mpi(2,1,21,0.5,1.tmp_path)
     assert result.returncode != 0
     assert data is None
+    
 
 
 def original_equilibrium(temp, seed):
