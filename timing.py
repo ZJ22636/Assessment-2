@@ -17,7 +17,7 @@ elif extra is not None:
 output_file = "Results/Timings/{}.csv".format(label)
 
 #Settings keep same so all same
-sizes = [20, 50, 100, 200]
+sizes = [400, 800]
 steps = 50
 temp = 0.5
 repeats = 3
